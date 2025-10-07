@@ -1,11 +1,11 @@
-package com.example.webhook_outbox.service
+package com.example.webhookoutbox.service
 
-import com.example.webhook_outbox.dto.EnqueueRequest
-import com.example.webhook_outbox.dto.EnqueueResponse
-import com.example.webhook_outbox.dto.OutboxItemResponse
-import com.example.webhook_outbox.entity.WebhookOutbox
-import com.example.webhook_outbox.enums.Status
-import com.example.webhook_outbox.repository.WebhookOutboxRepository
+import com.example.webhookoutbox.dto.EnqueueRequest
+import com.example.webhookoutbox.dto.EnqueueResponse
+import com.example.webhookoutbox.dto.OutboxItemResponse
+import com.example.webhookoutbox.entity.WebhookOutbox
+import com.example.webhookoutbox.enums.Status
+import com.example.webhookoutbox.repository.WebhookOutboxRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.data.domain.PageRequest
 import org.springframework.http.HttpStatus

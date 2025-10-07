@@ -1,4 +1,4 @@
-package com.example.webhook_outbox.controller
+package com.example.webhookoutbox.controller
 
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 @RestController
 class ReceiverController {
     private val flakyCounter = ConcurrentHashMap<String, AtomicInteger>()
+    private val rateLimitTracker = ConcurrentHashMap<String, Long>()
 
     @PostMapping("/receiver")
     fun receive(
@@ -20,11 +21,13 @@ class ReceiverController {
         @RequestHeader("X-Aggregate-Id", required = false) aggregateId: String?,
         @RequestBody payload: Any
     ): ResponseEntity<String> {
+        println("Received webhook with mode=$mode")
+        val id = aggregateId ?: "default"
+        val now = System.currentTimeMillis()
         return when (mode?.lowercase()) {
             "success" -> ResponseEntity.ok("ok")
 
             "flaky" -> {
-                val id = aggregateId ?: "default"
                 val counter = flakyCounter.computeIfAbsent(id) { AtomicInteger(0) }
                 if (counter.incrementAndGet() <= 2) {
                     ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("temporary error")
@@ -34,9 +37,21 @@ class ReceiverController {
             }
 
             "rate-limit" -> {
-                ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                    .header(HttpHeaders.RETRY_AFTER, "2")
-                    .body("rate limit")
+                val lastAttempt = rateLimitTracker[id]
+
+                if (lastAttempt == null) {
+                    rateLimitTracker[id] = now
+                    ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .header(HttpHeaders.RETRY_AFTER, "2")
+                        .body("rate limit")
+                } else if (now - lastAttempt >= 2000) {
+                    rateLimitTracker.remove(id)
+                    ResponseEntity.ok("ok")
+                } else {
+                    ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .header(HttpHeaders.RETRY_AFTER, "2")
+                        .body("rate limit")
+                }
             }
 
             "fail-400" -> {

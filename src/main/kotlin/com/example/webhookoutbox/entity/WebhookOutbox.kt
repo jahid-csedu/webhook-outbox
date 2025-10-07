@@ -1,6 +1,6 @@
-package com.example.webhook_outbox.entity
+package com.example.webhookoutbox.entity
 
-import com.example.webhook_outbox.enums.Status
+import com.example.webhookoutbox.enums.Status
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType

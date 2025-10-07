@@ -1,6 +1,6 @@
-package com.example.webhook_outbox.dto
+package com.example.webhookoutbox.dto
 
-import com.example.webhook_outbox.enums.Status
+import com.example.webhookoutbox.enums.Status
 import java.time.OffsetDateTime
 import java.util.UUID
 

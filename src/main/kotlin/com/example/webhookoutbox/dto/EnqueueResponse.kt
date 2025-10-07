@@ -1,7 +1,7 @@
-package com.example.webhook_outbox.dto
+package com.example.webhookoutbox.dto
 
 
-import com.example.webhook_outbox.enums.Status
+import com.example.webhookoutbox.enums.Status
 import java.util.UUID
 
 data class EnqueueResponse(

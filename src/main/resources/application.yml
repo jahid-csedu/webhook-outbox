@@ -22,9 +22,11 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
 
-webhooks:
-  hmac-secret: ${HMAC_SECRET:dev-secret}
-  max-attempts: ${WEBHOOK_MAX_ATTEMPTS:10}
+webhook:
+  hmac-secret: secret
+  max-attempts: 10
   backoff:
-    base-ms: ${WEBHOOK_BACKOFF_BASE_MS:1000}
-    max-ms: ${WEBHOOK_BACKOFF_MAX_MS:300000}
+    base-ms: 1000
+    factor: 2.0
+    max-ms: 300000
+    jitter-percent: 10

@@ -1,4 +1,4 @@
-package com.example.webhook_outbox
+package com.example.webhookoutbox
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest

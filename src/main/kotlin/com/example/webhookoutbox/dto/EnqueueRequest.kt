@@ -1,4 +1,4 @@
-package com.example.webhook_outbox.dto
+package com.example.webhookoutbox.dto
 
 data class EnqueueRequest(
     val aggregateId: String,

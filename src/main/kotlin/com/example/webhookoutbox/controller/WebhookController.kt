@@ -1,9 +1,9 @@
-package com.example.webhook_outbox.controller
+package com.example.webhookoutbox.controller
 
-import com.example.webhook_outbox.dto.EnqueueRequest
-import com.example.webhook_outbox.dto.EnqueueResponse
-import com.example.webhook_outbox.dto.OutboxItemResponse
-import com.example.webhook_outbox.service.WebhookService
+import com.example.webhookoutbox.dto.EnqueueRequest
+import com.example.webhookoutbox.dto.EnqueueResponse
+import com.example.webhookoutbox.dto.OutboxItemResponse
+import com.example.webhookoutbox.service.WebhookService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable

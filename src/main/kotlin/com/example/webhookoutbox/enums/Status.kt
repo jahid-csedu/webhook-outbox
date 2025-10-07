@@ -1,4 +1,4 @@
-package com.example.webhook_outbox.enums
+package com.example.webhookoutbox.enums
 
 enum class Status {
     pending,

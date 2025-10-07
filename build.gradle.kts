@@ -27,12 +27,14 @@ dependencies {
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 	runtimeOnly("org.postgresql:postgresql")
+    testImplementation("com.h2database:h2")
 	testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.mockito", module = "mockito-core")
     }
     testImplementation("io.mockk:mockk:1.14.6")
     testImplementation("org.testcontainers:junit-jupiter:1.19.0")
     testImplementation("org.testcontainers:postgresql:1.19.0")
+    testImplementation("org.awaitility:awaitility-kotlin:4.2.0")
 }
 
 kotlin {
