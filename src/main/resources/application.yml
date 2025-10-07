@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: webhook-outbox
+  datasource:
+    url: jdbc:postgresql://localhost:5432/webhooks
+    driver-class-name: org.postgresql.Driver
+    username: user
+    password: pass
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+webhooks:
+  hmac-secret: ${HMAC_SECRET:dev-secret}
+  max-attempts: ${WEBHOOK_MAX_ATTEMPTS:10}
+  backoff:
+    base-ms: ${WEBHOOK_BACKOFF_BASE_MS:1000}
+    max-ms: ${WEBHOOK_BACKOFF_MAX_MS:300000}
