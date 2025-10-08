@@ -3,9 +3,11 @@ package com.example.webhookoutbox.worker
 import com.example.webhookoutbox.entity.WebhookOutbox
 import com.example.webhookoutbox.enums.Status
 import com.example.webhookoutbox.repository.WebhookOutboxRepository
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatusCode
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
@@ -15,6 +17,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.random.Random
 
@@ -23,6 +26,7 @@ class WebhookDeliveryWorker(
     private val repository: WebhookOutboxRepository,
     private val webClient: WebClient
 ) {
+    private val LOGGER = LoggerFactory.getLogger(WebhookDeliveryWorker::class.java)
 
     @Value("\${webhook.hmac-secret}")
     lateinit var hmacSecret: String
@@ -45,7 +49,7 @@ class WebhookDeliveryWorker(
     fun tick(mode: String? = null) {
         val now = OffsetDateTime.now()
         val dueWebhooks = repository.findDueForDelivery(now)
-        println("Running tick at $now, found ${dueWebhooks.size} webhooks")
+        LOGGER.info("Running tick at $now, found ${dueWebhooks.size} webhooks")
 
         for (webhook in dueWebhooks) {
             val prevSeq = webhook.seq - 1
@@ -54,7 +58,7 @@ class WebhookDeliveryWorker(
             } else true
 
             if (!prevDelivered) continue
-            println("trying to delivery webhook")
+            LOGGER.info("trying to delivery webhook")
             tryDeliver(webhook, mode)
         }
     }
@@ -69,7 +73,7 @@ class WebhookDeliveryWorker(
 
         try {
             val response = callWebClient(webhook, timestamp, signature, mode)
-            println("Response $response")
+            logAttempt(webhook, response.statusCode)
             when {
                 response.statusCode.is2xxSuccessful -> {
                     handleSuccess(webhook, response)
@@ -92,11 +96,12 @@ class WebhookDeliveryWorker(
             }
         } catch (ex: Exception) {
             retryWebhook(webhook, lastError = ex.message)
+            logAttempt(webhook, null)
         }
 
         webhook.updatedAt = OffsetDateTime.now()
         repository.save(webhook)
-        println("Delivery result for webhook ${webhook.id}: ${webhook.status}")
+        LOGGER.info("Delivery result for webhook ${webhook.id}: ${webhook.status}")
     }
 
 
@@ -148,20 +153,26 @@ class WebhookDeliveryWorker(
             webhook.status = Status.dead
         } else {
             webhook.status = Status.pending
-            val backoff = retryAfter ?: (baseMs * factor.pow(webhook.attempts.toDouble())).toLong()
-            val nextAttempt = Instant.now().plusMillis(if (retryAfter != null) backoff else jitter(backoff))
+            var nextAttempt = Instant.now()
+            if (retryAfter != null) {
+                nextAttempt = nextAttempt.plusMillis(retryAfter)
+            } else {
+                val backoff = min((baseMs * factor.pow(webhook.attempts.toDouble())).toLong(), maxMs)
+                nextAttempt = nextAttempt.plusMillis(jitter(backoff))
+            }
+
             webhook.nextAttemptAt = OffsetDateTime.ofInstant(nextAttempt, ZoneId.systemDefault())
-            println("Next Attempt: ${webhook.nextAttemptAt}")
+            LOGGER.info("Next Attempt: ${webhook.nextAttemptAt}")
         }
     }
 
     private fun jitter(ms: Long): Long {
         val jitterAmount = (ms * jitterPercent / 100.0).toLong()
-        if (jitterAmount <= 0) return ms // no jitter possible for very small ms
+        if (jitterAmount <= 0) return ms
 
         val min = ms - jitterAmount
         val max = ms + jitterAmount
-        // Ensure max > min, otherwise fallback to ms
+
         return if (max > min) Random.nextLong(min, max) else ms
     }
 
@@ -170,5 +181,19 @@ class WebhookDeliveryWorker(
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(hmacKey)
         return mac.doFinal(data.toByteArray()).joinToString("") { "%02x".format(it) }
+    }
+
+    private fun logAttempt(webhook: WebhookOutbox, status: HttpStatusCode?) {
+        val logEntry = mapOf(
+            "id" to webhook.id,
+            "aggregateId" to webhook.aggregateId,
+            "seq" to webhook.seq,
+            "attempt" to webhook.attempts,
+            "status" to webhook.status,
+            "httpCode" to (status?.value() ?: "N/A"),
+            "nextAttemptInMs" to webhook.nextAttemptAt
+        )
+
+        LOGGER.info("WebhookAttempt: {}", logEntry);
     }
 }

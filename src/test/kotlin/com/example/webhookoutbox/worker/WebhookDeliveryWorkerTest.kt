@@ -40,7 +40,7 @@ class WebhookDeliveryWorkerTest {
         repository.deleteAll()
 
         webClient = WebClient.builder()
-            .baseUrl("http://localhost:$port") // hit test receiver controller
+            .baseUrl("http://localhost:$port")
             .build()
 
         worker = WebhookDeliveryWorker(repository, webClient)
@@ -70,7 +70,6 @@ class WebhookDeliveryWorkerTest {
         ).also { repository.save(it) }
     }
 
-    // 1️⃣ Retry then succeed (flaky)
     @Test
     fun `flaky webhook should eventually succeed`() {
         val webhook = createWebhook("{\"foo\":\"bar\"}", "agg-flaky")
@@ -85,7 +84,6 @@ class WebhookDeliveryWorkerTest {
         assertEquals(3, delivered.attempts)
     }
 
-    // 2️⃣ Fail-fast 400
     @Test
     fun `fail-fast 400 should go dead immediately`() {
         val webhook = createWebhook("{\"foo\":\"bad\"}", "agg-bad")
@@ -97,7 +95,6 @@ class WebhookDeliveryWorkerTest {
         assertEquals(1, updated.attempts)
     }
 
-    // 3️⃣ Rate-limit with Retry-After header (simulated ~2s)
     @Test
     fun `rate-limit webhook should retry and eventually deliver`() {
         val webhook = createWebhook("{\"foo\":\"rl\"}", "agg-rl")
@@ -112,7 +109,6 @@ class WebhookDeliveryWorkerTest {
         assertEquals(true, delivered.attempts > 1)
     }
 
-    // 4️⃣ Per-aggregate ordering
     @Test
     fun `webhooks of same aggregate should deliver sequentially`() {
         val w0 = createWebhook("{\"foo\":\"A0\"}", "agg-seq", seq = 0)
@@ -128,14 +124,12 @@ class WebhookDeliveryWorkerTest {
         assertEquals(true, second.updatedAt!!.isAfter(first.updatedAt))
     }
 
-    // 5️⃣ Replay DLQ
     @Test
     fun `dead webhook can be replayed and delivered`() {
         val webhook = createWebhook("{\"foo\":\"dead\"}", "agg-replay")
         webhook.status = Status.dead
         repository.save(webhook)
 
-        // Simulate replay endpoint setting to pending
         webhook.status = Status.pending
         webhook.nextAttemptAt = OffsetDateTime.now().minusSeconds(1)
         repository.save(webhook)
@@ -146,7 +140,6 @@ class WebhookDeliveryWorkerTest {
         assertEquals(Status.delivered, delivered.status)
     }
 
-    // 6️⃣ Success path
     @Test
     fun `successful webhook should deliver immediately`() {
         val webhook = createWebhook("{\"foo\":\"ok\"}", "agg-ok")
